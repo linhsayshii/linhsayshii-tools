@@ -7,6 +7,7 @@ import Shortener from './pages/Shortener';
 import Downloader from './pages/Downloader';
 import Pastebin from './pages/Pastebin';
 import PasteView from './pages/PasteView';
+import RedirectHandler from './components/RedirectHandler';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/ip" element={<IP />} />
         <Route path="/share" element={<Pastebin />} />
         <Route path="/share/:id" element={<PasteView />} />
+        <Route path="/:shortCode" element={<RedirectHandler />} />
       </Routes>
     </Router>
   );

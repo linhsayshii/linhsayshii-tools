@@ -14,8 +14,14 @@ class Settings:
         "DATABASE_URL", "sqlite:///./data/shortener.db"
     )
     
-    # Short URL Base Configuration
-    SHORT_URL_BASE: str = os.environ.get("SHORT_URL_BASE", "https://hnglinh.io.vn")
+    # Base domain used for generating share/short links
+    BASE_DOMAIN: str = os.environ.get("BASE_DOMAIN", "https://hnglinh.io.vn")
+
+    # Short URL Base Configuration (defaults to BASE_DOMAIN if not set)
+    SHORT_URL_BASE: str = os.environ.get("SHORT_URL_BASE") or os.environ.get("BASE_DOMAIN", "https://hnglinh.io.vn")
+
+    # Paste share URL Base Configuration (defaults to BASE_DOMAIN if not set)
+    PASTE_URL_BASE: str = os.environ.get("PASTE_URL_BASE") or os.environ.get("BASE_DOMAIN", "https://hnglinh.io.vn")
     
     # CORS Origins Configuration
     CORS_ORIGINS_RAW: str = os.environ.get("CORS_ORIGINS", "")
@@ -24,11 +30,11 @@ class Settings:
     def cors_origins(self):
         if self.CORS_ORIGINS_RAW:
             return [origin.strip() for origin in self.CORS_ORIGINS_RAW.split(",")]
-        return [
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "https://hnglinh.io.vn",
-            "https://www.hnglinh.io.vn",
-        ]
+        base = self.BASE_DOMAIN.rstrip("/")
+        origins = ["http://localhost:5173", "http://localhost:3000", base]
+        # Also include www variant if not already present
+        if base.startswith("https://") and not base.startswith("https://www."):
+            origins.append("https://www." + base.removeprefix("https://"))
+        return origins
 
 settings = Settings()

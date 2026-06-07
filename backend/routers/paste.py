@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Paste
 from pydantic import BaseModel
+from config import settings
 import datetime
 import uuid
 import secrets
@@ -35,7 +36,7 @@ def create_paste(paste_data: PasteCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_paste)
     
-    return {"id": paste_id, "expires_at": expires}
+    return {"id": paste_id, "expires_at": expires, "share_url": f"{settings.PASTE_URL_BASE.rstrip('/')}/share/{paste_id}"}
 
 @router.get("/{paste_id}")
 def get_paste(paste_id: str, db: Session = Depends(get_db)):

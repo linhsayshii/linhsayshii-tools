@@ -64,8 +64,7 @@ const Pastebin = () => {
                 title: title || 'Untitled',
                 language 
             });
-            const baseUrl = window.location.origin;
-            setResult(`${baseUrl}/share/${res.data.id}`);
+            setResult(res.data.share_url);
         } catch (err) {
             alert("Lỗi tạo bản ghi chia sẻ: " + (err.response?.data?.detail || err.message));
         } finally {
@@ -74,9 +73,40 @@ const Pastebin = () => {
     };
 
     const copyToClipboard = () => {
-        navigator.clipboard.writeText(result);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        const text = result;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                })
+                .catch(() => {
+                    fallbackCopyTextToClipboard(text);
+                });
+        } else {
+            fallbackCopyTextToClipboard(text);
+        }
+    };
+
+    const fallbackCopyTextToClipboard = (text) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            }
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+        document.body.removeChild(textArea);
     };
 
     const customSelectStyles = {

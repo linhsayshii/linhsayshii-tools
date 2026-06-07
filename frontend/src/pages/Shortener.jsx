@@ -56,9 +56,39 @@ const Shortener = () => {
     };
 
     const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                })
+                .catch(() => {
+                    fallbackCopyTextToClipboard(text);
+                });
+        } else {
+            fallbackCopyTextToClipboard(text);
+        }
+    };
+
+    const fallbackCopyTextToClipboard = (text) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            }
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+        document.body.removeChild(textArea);
     };
 
     return (
@@ -102,7 +132,7 @@ const Shortener = () => {
                                 </label>
                                 <div className="flex items-stretch rounded-lg overflow-hidden">
                                     <span className="text-xs sm:text-sm text-neutral-400 bg-neutral-900 border border-r-0 border-white/[0.06] px-2.5 sm:px-3.5 flex items-center select-none font-medium">
-                                        hnglinh.io.vn/
+                                        {(import.meta.env.VITE_SHORT_URL_BASE || '').replace(/^https?:\/\//, '').replace(/\/$/, '')}/
                                     </span>
                                     <input
                                         type="text"

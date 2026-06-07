@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import api from '../api';
 import { Button } from '../components/ui/button';
-import { Loader2, Search, Download, FileAudio, FileVideo, Film, ShieldCheck, Clock, User } from 'lucide-react';
+import { Loader2, Search, Download, FileAudio, FileVideo, Film, ShieldCheck, Clock, User, CheckCircle2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -334,6 +334,12 @@ const Downloader = () => {
                                 onVerify={handleCaptchaChange}
                                 theme="dark"
                             />
+                            {captchaToken && (
+                                <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg w-full justify-center">
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                    <span>Xác thực thành công</span>
+                                </div>
+                            )}
                         </div>
                         
                         <DialogFooter className="flex sm:flex-row gap-3 pt-3 border-t border-white/[0.04]">
