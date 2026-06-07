@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+yt-dlp
+qrcode[pil]
+sqlalchemy
+pydantic
+requests

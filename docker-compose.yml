@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/shortener.db:/app/shortener.db
+    environment:
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,https://hnglinh.io.vn,https://www.hnglinh.io.vn
+      - TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
