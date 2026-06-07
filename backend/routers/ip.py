@@ -6,7 +6,12 @@ router = APIRouter()
 
 
 def get_client_ip(request: Request) -> str:
-    # Respect proxy headers (nginx sets X-Forwarded-For)
+    # Cloudflare Tunnel injects the real client IP here (most reliable)
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip.strip()
+
+    # Standard proxy header (nginx X-Forwarded-For)
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
         # May be a comma-separated list; first entry is the original client
@@ -27,6 +32,13 @@ def is_ipv6(ip: str) -> bool:
         return False
 
 
+def is_private_ip(ip: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip).is_private
+    except ValueError:
+        return False
+
+
 @router.get("/")
 def get_ip_details(request: Request):
     client_ip = get_client_ip(request)
@@ -40,9 +52,19 @@ def get_ip_details(request: Request):
         else:
             ipv4 = client_ip
 
-    # Geo lookup using the detected IP (prefer ipv4 for reliability)
-    geo = {}
+    # Skip geo lookup for private/loopback IPs (LAN access via DNS rewrite)
     lookup_ip = ipv4 or ipv6
+    if lookup_ip and is_private_ip(lookup_ip):
+        return {
+            "ipv4": ipv4,
+            "ipv6": ipv6,
+            "location": "Local Network",
+            "isp": "Private Network",
+            "geo_details": {},
+        }
+
+    # Geo lookup for public IPs only
+    geo = {}
     if lookup_ip:
         try:
             data = requests.get(f"http://ip-api.com/json/{lookup_ip}", timeout=2).json()

@@ -30,18 +30,19 @@ const IP = () => {
             setProbingCount(prev => Math.max(0, prev - 1));
 
             if (data) {
-                if (data.ipv6 && !ipv6) {
-                    setIpv6(data.ipv6);
-                }
-
-                if (data.ipv4) {
+                const key = data.ipv4 || data.ipv6;
+                if (key) {
                     setResults(prevMap => {
                         const newMap = new Map(prevMap);
-                        if (!newMap.has(data.ipv4)) {
-                            newMap.set(data.ipv4, data);
+                        if (!newMap.has(key)) {
+                            newMap.set(key, data);
                         }
                         return newMap;
                     });
+                }
+                // Track standalone IPv6 banner only when there's also an IPv4
+                if (data.ipv4 && data.ipv6 && !ipv6) {
+                    setIpv6(data.ipv6);
                 }
             }
         });
@@ -137,10 +138,11 @@ const IP = () => {
                             <div className="p-6 grid gap-6 md:grid-cols-3">
                                 <div className="space-y-1.5">
                                     <div className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider flex items-center gap-1.5">
-                                        <Globe className="h-3.5 w-3.5 text-neutral-500" /> Public IPv4
+                                        <Globe className="h-3.5 w-3.5 text-neutral-500" />
+                                        {data.ipv4 ? 'Public IPv4' : 'Public IPv6'}
                                     </div>
-                                    <div className="text-xl font-semibold font-mono tracking-wide text-white select-all">
-                                        {data.ipv4}
+                                    <div className="text-xl font-semibold font-mono tracking-wide text-white select-all break-all">
+                                        {data.ipv4 || data.ipv6}
                                     </div>
                                 </div>
 

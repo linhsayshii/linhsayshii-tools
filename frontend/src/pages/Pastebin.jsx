@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import api from '../api';
 import { Button } from '../components/ui/button';
-import { Code, Copy, Check, ExternalLink, Clock } from 'lucide-react';
+import { Code, Copy, Check, ExternalLink, Clock, Loader2 } from 'lucide-react';
 import Select from 'react-select';
 import Editor from 'react-simple-code-editor';
 import Prism from 'prismjs';
