@@ -60,7 +60,13 @@ const PasteView = () => {
 
     useEffect(() => {
         if (data) {
-            Prism.highlightAll();
+            setTimeout(() => {
+                try {
+                    Prism.highlightAll();
+                } catch (e) {
+                    console.warn('Prism highlight error:', e);
+                }
+            }, 0);
         }
     }, [data]);
 
