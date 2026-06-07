@@ -2,6 +2,9 @@ import React, { useEffect, useRef } from "react";
 
 export default function Turnstile({ sitekey, onVerify, theme = "dark" }) {
   const containerRef = useRef(null);
+  // Store latest onVerify in a ref so we never need it as a useEffect dependency
+  const onVerifyRef = useRef(onVerify);
+  useEffect(() => { onVerifyRef.current = onVerify; }, [onVerify]);
   const widgetIdRef = useRef(null);
 
   useEffect(() => {
@@ -14,13 +17,13 @@ export default function Turnstile({ sitekey, onVerify, theme = "dark" }) {
             sitekey: sitekey,
             theme: theme,
             callback: (token) => {
-              if (onVerify) onVerify(token);
+              if (onVerifyRef.current) onVerifyRef.current(token);
             },
             "expired-callback": () => {
-              if (onVerify) onVerify(null);
+              if (onVerifyRef.current) onVerifyRef.current(null);
             },
             "error-callback": () => {
-              if (onVerify) onVerify(null);
+              if (onVerifyRef.current) onVerifyRef.current(null);
             }
           });
           widgetIdRef.current = widgetId;
@@ -61,7 +64,8 @@ export default function Turnstile({ sitekey, onVerify, theme = "dark" }) {
         }
       }
     };
-  }, [sitekey, onVerify, theme]);
+  // Only re-run if sitekey or theme changes — NOT onVerify (handled via ref above)
+  }, [sitekey, theme]);
 
   return <div ref={containerRef} className="cf-turnstile-container" />;
 }
