@@ -36,9 +36,21 @@ const PasteView = () => {
         const fetchPaste = async () => {
             try {
                 const res = await api.get(`/paste/${id}`);
-                setData(res.data);
+                if (res.data && res.data.content) {
+                    setData(res.data);
+                } else {
+                    setError('Dữ liệu trả về không hợp lệ.');
+                }
             } catch (err) {
-                setError(err.response?.status === 404 ? 'Bản ghi không tồn tại hoặc đã hết hạn.' : 'Lỗi kết nối máy chủ.');
+                if (err.response?.status === 404) {
+                    setError('Bản ghi không tồn tại hoặc đã hết hạn.');
+                } else if (err.response?.status === 410) {
+                    setError('Bản ghi đã hết hạn và bị xóa.');
+                } else if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+                    setError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng.');
+                } else {
+                    setError(err.response?.data?.detail || 'Lỗi kết nối máy chủ.');
+                }
             } finally {
                 setLoading(false);
             }
@@ -116,7 +128,7 @@ const PasteView = () => {
         );
     }
 
-    if (error) {
+    if (error || !data) {
         return (
             <Layout>
                 <div className="flex flex-col items-center justify-center h-[50vh] gap-5 text-center">
@@ -124,7 +136,7 @@ const PasteView = () => {
                         <AlertTriangle className="h-8 w-8" />
                     </div>
                     <h2 className="text-lg font-semibold text-white">Record Not Found</h2>
-                    <p className="text-xs text-neutral-500 max-w-sm">{error}</p>
+                    <p className="text-xs text-neutral-500 max-w-sm">{error || 'Không thể tải dữ liệu bản ghi.'}</p>
                     <button 
                         onClick={() => navigate('/share')}
                         className="btn-secondary text-xs font-semibold px-6 py-2.5 flex items-center gap-2 cursor-pointer"
