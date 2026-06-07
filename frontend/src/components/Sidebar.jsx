@@ -24,7 +24,7 @@ const Sidebar = ({ isMobile = false, onClose }) => {
                     <div className="h-7 w-7 rounded-lg bg-white/10 flex items-center justify-center border border-white/10">
                         <Zap className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-base font-semibold tracking-wider text-white uppercase">linhsayshii</span>
+                    <span className="text-base font-semibold tracking-wider text-white">linhsayshii</span>
                 </div>
                 {isMobile && (
                     <button 
