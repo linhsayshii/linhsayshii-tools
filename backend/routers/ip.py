@@ -39,9 +39,26 @@ def is_private_ip(ip: str) -> bool:
         return False
 
 
+def is_valid_ip(ip: str) -> bool:
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except ValueError:
+        return False
+
+
 @router.get("/")
-def get_ip_details(request: Request):
-    client_ip = get_client_ip(request)
+def get_ip_details(request: Request, ip: str = None):
+    client_ip = ip.strip() if ip else None
+
+    if client_ip and not is_valid_ip(client_ip):
+        client_ip = None
+
+    if not client_ip:
+        client_ip = get_client_ip(request)
+
+    if not is_valid_ip(client_ip):
+        client_ip = "unknown"
 
     ipv4 = None
     ipv6 = None

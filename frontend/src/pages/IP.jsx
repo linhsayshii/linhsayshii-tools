@@ -4,20 +4,77 @@ import api from '../api';
 import { RefreshCw, Globe, MapPin, Network, Activity } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 
+const PROBE_TARGETS = [
+    {
+        url: 'https://api.ipify.org?format=json',
+        type: 'ipv4',
+        parse: (data) => data.ip
+    },
+    {
+        url: 'https://v4.ident.me/.json',
+        type: 'ipv4',
+        parse: (data) => data.ip
+    },
+    {
+        url: 'https://ipv4.icanhazip.com',
+        type: 'ipv4',
+        parse: (data) => typeof data === 'string' ? data.trim() : null
+    },
+    {
+        url: 'https://api6.ipify.org?format=json',
+        type: 'ipv6',
+        parse: (data) => data.ip
+    },
+    {
+        url: 'https://v6.ident.me/.json',
+        type: 'ipv6',
+        parse: (data) => data.ip
+    },
+    {
+        url: 'https://ipv6.icanhazip.com',
+        type: 'ipv6',
+        parse: (data) => typeof data === 'string' ? data.trim() : null
+    },
+    {
+        url: 'https://api64.ipify.org?format=json',
+        type: 'dual',
+        parse: (data) => data.ip
+    },
+    {
+        url: 'https://ident.me/.json',
+        type: 'dual',
+        parse: (data) => data.ip
+    },
+    {
+        url: 'https://icanhazip.com',
+        type: 'dual',
+        parse: (data) => typeof data === 'string' ? data.trim() : null
+    },
+    {
+        url: 'https://freeipapi.com/api/json',
+        type: 'dual',
+        parse: (data) => data.ipAddress
+    }
+];
+
+const getBustedUrl = (url) => {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}_t=${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+};
+
+const isValidIP = (ip) => {
+    if (!ip) return false;
+    const ipv4Regex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;
+    const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
+    const clean = ip.trim();
+    return ipv4Regex.test(clean) || ipv6Regex.test(clean);
+};
+
 const IP = () => {
     const [results, setResults] = useState(new Map());
     const [ipv6, setIpv6] = useState(null);
     const [loading, setLoading] = useState(false);
     const [probingCount, setProbingCount] = useState(0);
-
-    const probeIP = async () => {
-        try {
-            const res = await api.get('/ip/');
-            return res.data;
-        } catch {
-            return null;
-        }
-    };
 
     const runMultiProbe = async () => {
         setLoading(true);
@@ -25,25 +82,88 @@ const IP = () => {
         setIpv6(null);
         setProbingCount(15);
 
-        const promises = Array(15).fill(0).map(async () => {
-            const data = await probeIP();
-            setProbingCount(prev => Math.max(0, prev - 1));
+        // Build 15 probe configurations
+        const ipv4Pool = PROBE_TARGETS.filter(t => t.type === 'ipv4' || t.type === 'dual');
+        const ipv6Pool = PROBE_TARGETS.filter(t => t.type === 'ipv6');
 
-            if (data) {
-                const key = data.ipv4 || data.ipv6;
-                if (key) {
-                    setResults(prevMap => {
-                        const newMap = new Map(prevMap);
-                        if (!newMap.has(key)) {
-                            newMap.set(key, data);
+        const requestQueue = [];
+        // 12 IPv4/dual-stack requests to trigger PCC paths
+        for (let i = 0; i < 12; i++) {
+            requestQueue.push(ipv4Pool[i % ipv4Pool.length]);
+        }
+        // 3 IPv6-only requests
+        for (let i = 0; i < 3; i++) {
+            requestQueue.push(ipv6Pool[i % ipv6Pool.length]);
+        }
+
+        const detectedIPs = new Set();
+
+        const promises = requestQueue.map(async (target) => {
+            try {
+                const urlWithCb = getBustedUrl(target.url);
+                const isJson = target.url.includes('format=json') || target.url.includes('/json');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                
+                const response = await fetch(urlWithCb, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                let ipResponse = null;
+                if (isJson) {
+                    const data = await response.json();
+                    ipResponse = target.parse(data);
+                } else {
+                    const text = await response.text();
+                    ipResponse = target.parse(text);
+                }
+
+                if (ipResponse && isValidIP(ipResponse)) {
+                    const cleanIp = ipResponse.trim();
+                    
+                    if (!detectedIPs.has(cleanIp)) {
+                        detectedIPs.add(cleanIp);
+                        
+                        try {
+                            // Fetch ISP and location metadata from backend for this public IP
+                            const res = await api.get('/ip/', { params: { ip: cleanIp } });
+                            if (res.data) {
+                                setResults(prevMap => {
+                                    const newMap = new Map(prevMap);
+                                    if (!newMap.has(cleanIp)) {
+                                        newMap.set(cleanIp, res.data);
+                                    }
+                                    return newMap;
+                                });
+
+                                if (res.data.ipv6 && !ipv6) {
+                                    setIpv6(res.data.ipv6);
+                                }
+                            }
+                        } catch {
+                            // Backend fail fallback: show IP with unknown details
+                            const isV6 = cleanIp.includes(':');
+                            const fallbackData = {
+                                ipv4: isV6 ? null : cleanIp,
+                                ipv6: isV6 ? cleanIp : null,
+                                location: 'Unknown',
+                                isp: 'Unknown',
+                                geo_details: {}
+                            };
+                            setResults(prevMap => {
+                                const newMap = new Map(prevMap);
+                                if (!newMap.has(cleanIp)) {
+                                    newMap.set(cleanIp, fallbackData);
+                                }
+                                return newMap;
+                            });
                         }
-                        return newMap;
-                    });
+                    }
                 }
-                // Track standalone IPv6 banner only when there's also an IPv4
-                if (data.ipv4 && data.ipv6 && !ipv6) {
-                    setIpv6(data.ipv6);
-                }
+            } catch {
+                // Ignore API timeout/fail, proceed
+            } finally {
+                setProbingCount(prev => Math.max(0, prev - 1));
             }
         });
 
