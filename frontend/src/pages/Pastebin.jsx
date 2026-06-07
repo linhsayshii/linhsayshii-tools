@@ -64,7 +64,8 @@ const Pastebin = () => {
                 title: title || 'Untitled',
                 language 
             });
-            setResult(res.data.share_url);
+            const shareUrl = res.data.share_url || `${window.location.origin}/share/${res.data.id}`;
+            setResult(shareUrl);
         } catch (err) {
             alert("Lỗi tạo bản ghi chia sẻ: " + (err.response?.data?.detail || err.message));
         } finally {

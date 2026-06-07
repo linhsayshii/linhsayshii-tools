@@ -14,6 +14,9 @@ COPY requirements.txt .
 # Install python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Ensure data directory exists (persisted via Docker volume mount)
+RUN mkdir -p /app/data
+
 # Copy backend files
 COPY . .
 

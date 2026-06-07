@@ -157,12 +157,15 @@ const PasteView = () => {
         plaintext: 'txt',
     };
 
-    const languageClass = data.language === 'plaintext' ? '' : `language-${data.language}`;
-    const lines = data.content.split('\n');
-    const expiresDate = new Date(data.expires_at);
-    const createdDate = new Date(data.created_at);
+    const language = data.language || 'plaintext';
+    const content = data.content || '';
+    const title = data.title || 'untitled';
+    const languageClass = language === 'plaintext' ? '' : `language-${language}`;
+    const lines = content.split('\n');
+    const expiresDate = data.expires_at ? new Date(data.expires_at) : null;
+    const createdDate = data.created_at ? new Date(data.created_at) : null;
     const now = new Date();
-    const daysLeft = Math.ceil((expiresDate - now) / (1000 * 60 * 60 * 24));
+    const daysLeft = expiresDate ? Math.ceil((expiresDate - now) / (1000 * 60 * 60 * 24)) : null;
 
     return (
         <Layout>
@@ -176,19 +179,19 @@ const PasteView = () => {
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold tracking-tight text-white">
-                                    {data.title || 'untitled.txt'}
+                                    {title}
                                 </h2>
                                 <div className="flex flex-wrap items-center gap-3.5 text-[10px] text-neutral-400 font-medium uppercase tracking-wider mt-1.5">
                                     <span className="flex items-center gap-1.5">
                                         <Calendar className="h-3.5 w-3.5 text-neutral-500" />
-                                        Date: {createdDate.toLocaleDateString('vi-VN')}
+                                        Date: {createdDate ? createdDate.toLocaleDateString('vi-VN') : '—'}
                                     </span>
                                     <span className="flex items-center gap-1.5">
                                         <Clock className="h-3.5 w-3.5 text-neutral-500" />
-                                        Expires in: {daysLeft > 0 ? `${daysLeft} days` : 'Expiring today'}
+                                        Expires in: {daysLeft === null ? '—' : daysLeft > 0 ? `${daysLeft} days` : 'Expiring today'}
                                     </span>
                                     <span className="bg-white/5 text-neutral-200 border border-white/10 px-2 py-0.5 rounded text-[9px] font-mono">
-                                        {data.language.toUpperCase()}
+                                        {language.toUpperCase()}
                                     </span>
                                 </div>
                             </div>
@@ -223,10 +226,10 @@ const PasteView = () => {
                                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
                                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
                             </div>
-                            <span className="ml-2 text-neutral-400">{data.title || 'untitled'}.{languageMap[data.language] || 'txt'}</span>
+                            <span className="ml-2 text-neutral-400">{title}.{languageMap[language] || 'txt'}</span>
                         </div>
                         <div>
-                            Lines: {lines.length} &middot; Chars: {data.content.length}
+                            Lines: {lines.length} &middot; Chars: {content.length}
                         </div>
                     </div>
                     
@@ -245,7 +248,7 @@ const PasteView = () => {
                         <div className="flex-1 overflow-x-auto">
                             <pre className="!bg-transparent !m-0 !p-4 !border-0">
                                 <code className={`${languageClass} text-xs leading-6 block font-mono`}>
-                                    {data.content}
+                                    {content}
                                 </code>
                             </pre>
                         </div>
@@ -254,7 +257,7 @@ const PasteView = () => {
 
                 {/* Footer Expiry Info */}
                 <div className="text-center text-[10px] text-neutral-500 tracking-wide font-mono">
-                    Auto-deletion time: {expiresDate.toLocaleString('vi-VN')}
+                    Auto-deletion time: {expiresDate ? expiresDate.toLocaleString('vi-VN') : '—'}
                 </div>
             </div>
         </Layout>
