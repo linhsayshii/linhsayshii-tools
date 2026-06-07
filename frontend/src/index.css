@@ -203,4 +203,68 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.15);
   }
+
+  /* ── CodeMirror IDE Integration ──────────────────────── */
+  .codemirror-wrapper .cm-editor {
+    border-radius: 0;
+    outline: none !important;
+    font-family: var(--font-mono) !important;
+  }
+
+  /* Remove the default focus ring */
+  .codemirror-wrapper .cm-editor.cm-focused {
+    outline: none !important;
+  }
+
+  /* Transparent gutter background to blend with our card */
+  .codemirror-wrapper .cm-gutters {
+    background-color: rgba(0, 0, 0, 0.25) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.04) !important;
+    color: rgba(255, 255, 255, 0.2) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 12px !important;
+    min-width: 44px;
+  }
+
+  /* Gutter line number color */
+  .codemirror-wrapper .cm-lineNumbers .cm-gutterElement {
+    color: rgba(255, 255, 255, 0.22) !important;
+    padding-right: 12px;
+  }
+
+  /* Active line highlight */
+  .codemirror-wrapper .cm-activeLine {
+    background-color: rgba(255, 255, 255, 0.025) !important;
+  }
+
+  .codemirror-wrapper .cm-activeLineGutter {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    color: rgba(255, 255, 255, 0.45) !important;
+  }
+
+  /* Scrollbar inside CodeMirror */
+  .codemirror-wrapper .cm-scroller::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .codemirror-wrapper .cm-scroller::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .codemirror-wrapper .cm-scroller::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+  }
+
+  /* Selection color */
+  .codemirror-wrapper .cm-selectionBackground {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Placeholder text */
+  .codemirror-wrapper .cm-placeholder {
+    color: rgba(255, 255, 255, 0.2) !important;
+    font-style: italic;
+  }
 }

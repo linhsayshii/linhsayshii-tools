@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from routers import shortener, downloader, qrcode, ip, paste
+from routers import shortener, downloader, qrcode, ip, paste, health
 import os
 import models
 from database import engine
@@ -32,6 +32,7 @@ app.include_router(downloader.router, prefix="/api/downloader", tags=["Downloade
 app.include_router(qrcode.router, prefix="/api/qrcode", tags=["QR Code"])
 app.include_router(ip.router, prefix="/api/ip", tags=["IP Checker"])
 app.include_router(paste.router, prefix="/api/paste", tags=["Paste"])
+app.include_router(health.router, prefix="/api/health", tags=["Health"])
 
 @app.get("/")
 def read_root():

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { Link as LinkIcon, Download, QrCode, Globe, ArrowRight, FileCode, Network, Cpu, Clock, Activity } from 'lucide-react';
 import { motion as Motion } from 'framer-motion';
+import api from '../api';
 
 // Spotlight Card component that tracks mouse position for premium border glow
 const SpotlightCard = ({ children, className = '' }) => {
@@ -31,17 +32,48 @@ const SpotlightCard = ({ children, className = '' }) => {
 };
 
 const Home = () => {
-    // Simulated system stats
     const [time, setTime] = useState(new Date().toLocaleTimeString('vi-VN'));
-    const [cpu, setCpu] = useState('2.4%');
+    const [diagnostics, setDiagnostics] = useState({
+        cpu: null,
+        ping: null,
+        uptime: null,
+        modulesActive: null,
+        modulesTotal: null,
+    });
+
+    const fetchDiagnostics = useCallback(async () => {
+        try {
+            const start = performance.now();
+            const res = await api.get('/health');
+            const ping = Math.round(performance.now() - start);
+            const { cpu, uptime, modules } = res.data;
+            setDiagnostics({
+                cpu: cpu.toFixed(1) + '%',
+                ping: ping + 'ms',
+                uptime: `${uptime.hours}h ${String(uptime.minutes).padStart(2, '0')}m`,
+                modulesActive: String(modules.active).padStart(2, '0'),
+                modulesTotal: String(modules.total).padStart(2, '0'),
+            });
+        } catch {
+            // keep previous values on error
+        }
+    }, []);
 
     useEffect(() => {
+        // Clock update every second
         const timer = setInterval(() => {
             setTime(new Date().toLocaleTimeString('vi-VN'));
-            setCpu((Math.random() * 3 + 1).toFixed(1) + '%');
         }, 1000);
-        return () => clearInterval(timer);
-    }, []);
+
+        // Fetch diagnostics immediately then every 5s
+        fetchDiagnostics();
+        const diagTimer = setInterval(fetchDiagnostics, 5000);
+
+        return () => {
+            clearInterval(timer);
+            clearInterval(diagTimer);
+        };
+    }, [fetchDiagnostics]);
 
     const tools = [
         {
@@ -135,25 +167,40 @@ const Home = () => {
                             <div className="text-[10px] sm:text-xs text-neutral-500 flex items-center gap-1.5 font-medium uppercase tracking-wider">
                                 <Cpu className="h-3.5 w-3.5 text-neutral-400 flex-shrink-0" /> CPU Load
                             </div>
-                            <div className="text-xl sm:text-2xl font-semibold text-neutral-100 font-mono">{cpu}</div>
+                            <div className="text-xl sm:text-2xl font-semibold text-neutral-100 font-mono">
+                                {diagnostics.cpu ?? '—'}
+                            </div>
                         </div>
                         <div className="space-y-1">
                             <div className="text-[10px] sm:text-xs text-neutral-500 flex items-center gap-1.5 font-medium uppercase tracking-wider">
                                 <Activity className="h-3.5 w-3.5 text-neutral-400 flex-shrink-0" /> Ping latency
                             </div>
-                            <div className="text-xl sm:text-2xl font-semibold text-emerald-400 font-mono">12ms</div>
+                            <div className={`text-xl sm:text-2xl font-semibold font-mono ${
+                                diagnostics.ping === null ? 'text-neutral-500'
+                                : parseInt(diagnostics.ping) < 50 ? 'text-emerald-400'
+                                : parseInt(diagnostics.ping) < 150 ? 'text-yellow-400'
+                                : 'text-red-400'
+                            }`}>
+                                {diagnostics.ping ?? '—'}
+                            </div>
                         </div>
                         <div className="space-y-1">
                             <div className="text-[10px] sm:text-xs text-neutral-500 flex items-center gap-1.5 font-medium uppercase tracking-wider">
                                 <Clock className="h-3.5 w-3.5 text-neutral-400 flex-shrink-0" /> Uptime
                             </div>
-                            <div className="text-xl sm:text-2xl font-semibold text-neutral-200 font-mono">208h 44m</div>
+                            <div className="text-xl sm:text-2xl font-semibold text-neutral-200 font-mono">
+                                {diagnostics.uptime ?? '—'}
+                            </div>
                         </div>
                         <div className="space-y-1">
                             <div className="text-[10px] sm:text-xs text-neutral-500 flex items-center gap-1.5 font-medium uppercase tracking-wider">
                                 <Globe className="h-3.5 w-3.5 text-neutral-400 flex-shrink-0" /> Modules
                             </div>
-                            <div className="text-xl sm:text-2xl font-semibold text-neutral-200 font-mono">05 / 05</div>
+                            <div className="text-xl sm:text-2xl font-semibold text-neutral-200 font-mono">
+                                {diagnostics.modulesActive !== null
+                                    ? `${diagnostics.modulesActive} / ${diagnostics.modulesTotal}`
+                                    : '—'}
+                            </div>
                         </div>
                     </div>
                 </div>

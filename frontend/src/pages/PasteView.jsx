@@ -1,28 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import Layout from '../components/Layout';
-import { Copy, Check, AlertTriangle, FileCode, Calendar, Clock, Download, ArrowLeft } from 'lucide-react';
-import Prism from 'prismjs';
-import 'prismjs/themes/prism-tomorrow.css';
-import 'prismjs/components/prism-markup';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-java';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-csharp';
-import 'prismjs/components/prism-php';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-rust';
-import 'prismjs/components/prism-ruby';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-sql';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-markdown';
+import { Copy, Check, AlertTriangle, FileCode, Calendar, Clock, Download, ArrowLeft, Loader2 } from 'lucide-react';
+import CodeMirror from '@uiw/react-codemirror';
+import { vscodeDark } from '@uiw/codemirror-theme-vscode';
+import { javascript } from '@codemirror/lang-javascript';
+import { python } from '@codemirror/lang-python';
+import { java } from '@codemirror/lang-java';
+import { cpp } from '@codemirror/lang-cpp';
+import { php } from '@codemirror/lang-php';
+import { go } from '@codemirror/lang-go';
+import { rust } from '@codemirror/lang-rust';
+import { css } from '@codemirror/lang-css';
+import { html } from '@codemirror/lang-html';
+import { json } from '@codemirror/lang-json';
+import { sql } from '@codemirror/lang-sql';
+import { markdown } from '@codemirror/lang-markdown';
+import { EditorView } from '@codemirror/view';
+
+const getLangExtension = (lang) => {
+    switch (lang) {
+        case 'javascript': return [javascript({ jsx: true })];
+        case 'typescript': return [javascript({ typescript: true, jsx: true })];
+        case 'python':     return [python()];
+        case 'java':       return [java()];
+        case 'cpp':        return [cpp()];
+        case 'csharp':     return [cpp()];
+        case 'php':        return [php()];
+        case 'go':         return [go()];
+        case 'rust':       return [rust()];
+        case 'css':        return [css()];
+        case 'html':       return [html()];
+        case 'json':       return [json()];
+        case 'sql':        return [sql()];
+        case 'markdown':   return [markdown()];
+        default:           return [];
+    }
+};
+
+const languageMap = {
+    javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
+    cpp: 'cpp', csharp: 'cs', php: 'php', go: 'go', rust: 'rs',
+    ruby: 'rb', css: 'css', html: 'html', json: 'json',
+    sql: 'sql', bash: 'sh', markdown: 'md', plaintext: 'txt',
+};
 
 const PasteView = () => {
     const { id } = useParams();
@@ -36,7 +58,7 @@ const PasteView = () => {
         const fetchPaste = async () => {
             try {
                 const res = await api.get(`/paste/${id}`);
-                if (res.data && res.data.content) {
+                if (res.data?.content) {
                     setData(res.data);
                 } else {
                     setError('Dữ liệu trả về không hợp lệ.');
@@ -58,69 +80,44 @@ const PasteView = () => {
         fetchPaste();
     }, [id]);
 
-    useEffect(() => {
-        if (data) {
-            setTimeout(() => {
-                try {
-                    Prism.highlightAll();
-                } catch (e) {
-                    console.warn('Prism highlight error:', e);
-                }
-            }, 0);
-        }
-    }, [data]);
-
     const copyCode = () => {
-        if (data) {
-            const text = data.content;
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(text)
-                    .then(() => {
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                    })
-                    .catch(() => {
-                        fallbackCopyTextToClipboard(text);
-                    });
-            } else {
-                fallbackCopyTextToClipboard(text);
-            }
+        if (!data) return;
+        const text = data.content;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text)
+                .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
+                .catch(() => fallbackCopy(text));
+        } else {
+            fallbackCopy(text);
         }
     };
 
-    const fallbackCopyTextToClipboard = (text) => {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.top = "0";
-        textArea.style.left = "0";
-        textArea.style.position = "fixed";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
+    const fallbackCopy = (text) => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        Object.assign(ta.style, { top: '0', left: '0', position: 'fixed' });
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
         try {
-            const successful = document.execCommand('copy');
-            if (successful) {
+            if (document.execCommand('copy')) {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
             }
-        } catch (err) {
-            console.error('Fallback copy failed', err);
-        }
-        document.body.removeChild(textArea);
+        } catch { /* silent */ }
+        document.body.removeChild(ta);
     };
 
     const downloadCode = () => {
-        if (data) {
-            const blob = new Blob([data.content], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${data.title || 'code'}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }
+        if (!data) return;
+        const blob = new Blob([data.content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${data.title || 'code'}.${languageMap[data.language] || 'txt'}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     };
 
     if (loading) {
@@ -143,7 +140,7 @@ const PasteView = () => {
                     </div>
                     <h2 className="text-lg font-semibold text-white">Record Not Found</h2>
                     <p className="text-xs text-neutral-500 max-w-sm">{error || 'Không thể tải dữ liệu bản ghi.'}</p>
-                    <button 
+                    <button
                         onClick={() => navigate('/share')}
                         className="btn-secondary text-xs font-semibold px-6 py-2.5 flex items-center gap-2 cursor-pointer"
                     >
@@ -155,35 +152,12 @@ const PasteView = () => {
         );
     }
 
-    const languageMap = {
-        javascript: 'js',
-        typescript: 'ts',
-        python: 'py',
-        java: 'java',
-        cpp: 'cpp',
-        csharp: 'cs',
-        php: 'php',
-        go: 'go',
-        rust: 'rs',
-        ruby: 'rb',
-        css: 'css',
-        html: 'html',
-        json: 'json',
-        sql: 'sql',
-        bash: 'sh',
-        markdown: 'md',
-        plaintext: 'txt',
-    };
-
     const language = data.language || 'plaintext';
     const content = data.content || '';
     const title = data.title || 'untitled';
-    const languageClass = language === 'plaintext' ? '' : `language-${language}`;
-    const lines = content.split('\n');
     const expiresDate = data.expires_at ? new Date(data.expires_at) : null;
     const createdDate = data.created_at ? new Date(data.created_at) : null;
-    const now = new Date();
-    const daysLeft = expiresDate ? Math.ceil((expiresDate - now) / (1000 * 60 * 60 * 24)) : null;
+    const daysLeft = expiresDate ? Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
 
     return (
         <Layout>
@@ -196,9 +170,7 @@ const PasteView = () => {
                                 <FileCode className="h-5 w-5" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold tracking-tight text-white">
-                                    {title}
-                                </h2>
+                                <h2 className="text-xl font-bold tracking-tight text-white">{title}</h2>
                                 <div className="flex flex-wrap items-center gap-3.5 text-[10px] text-neutral-400 font-medium uppercase tracking-wider mt-1.5">
                                     <span className="flex items-center gap-1.5">
                                         <Calendar className="h-3.5 w-3.5 text-neutral-500" />
@@ -215,17 +187,17 @@ const PasteView = () => {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="flex gap-3 flex-shrink-0">
-                        <button 
-                            onClick={copyCode} 
+                        <button
+                            onClick={copyCode}
                             className="btn-secondary text-xs font-semibold py-2.5 px-4 flex items-center gap-1.5 cursor-pointer min-w-[90px] justify-center"
                         >
                             {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                             <span>{copied ? 'Copied' : 'Copy'}</span>
                         </button>
-                        <button 
-                            onClick={downloadCode} 
+                        <button
+                            onClick={downloadCode}
                             className="btn-primary text-xs font-semibold py-2.5 px-4 flex items-center gap-1.5 cursor-pointer"
                         >
                             <Download className="h-3.5 w-3.5" />
@@ -234,9 +206,9 @@ const PasteView = () => {
                     </div>
                 </div>
 
-                {/* Code Display Glass Card */}
+                {/* Code Viewer Glass Card */}
                 <div className="glass-card bg-white/[0.01] overflow-hidden shadow-2xl">
-                    {/* Mock editor header */}
+                    {/* Mock IDE header */}
                     <div className="bg-neutral-900/40 border-b border-white/[0.04] px-6 py-2.5 flex items-center justify-between text-[10px] text-neutral-500 font-medium tracking-wider font-mono">
                         <div className="flex items-center gap-2">
                             <div className="flex gap-1.5">
@@ -246,30 +218,12 @@ const PasteView = () => {
                             </div>
                             <span className="ml-2 text-neutral-400">{title}.{languageMap[language] || 'txt'}</span>
                         </div>
-                        <div>
-                            Lines: {lines.length} &middot; Chars: {content.length}
-                        </div>
+                        <div>Lines: {content.split('\n').length} &middot; Chars: {content.length}</div>
                     </div>
-                    
-                    {/* Code pre box */}
-                    <div className="relative bg-black/20 overflow-x-auto flex">
-                        {/* Line Numbers */}
-                        <div className="select-none bg-black/30 text-neutral-600 text-right pr-4 py-4 pl-4 sticky left-0 z-10 border-r border-white/[0.04] font-mono">
-                            {lines.map((_, idx) => (
-                                <div key={idx} className="text-xs leading-6 h-6">
-                                    {(idx + 1).toString().padStart(2, '0')}
-                                </div>
-                            ))}
-                        </div>
-                        
-                        {/* Preformatted Content */}
-                        <div className="flex-1 overflow-x-auto">
-                            <pre className="!bg-transparent !m-0 !p-4 !border-0">
-                                <code className={`${languageClass} text-xs leading-6 block font-mono`}>
-                                    {content}
-                                </code>
-                            </pre>
-                        </div>
+
+                    {/* Read-only CodeMirror viewer */}
+                    <div className="codemirror-wrapper">
+                        <CodeMirrorViewer content={content} language={language} />
                     </div>
                 </div>
 
@@ -282,12 +236,34 @@ const PasteView = () => {
     );
 };
 
-// Simple loader helper
-const Loader2 = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-    </svg>
-);
+// Separate component so useMemo works cleanly with language changes
+const CodeMirrorViewer = ({ content, language }) => {
+    const extensions = useMemo(() => [
+        ...getLangExtension(language),
+        EditorView.editable.of(false),
+        EditorView.lineWrapping,
+    ], [language]);
+
+    return (
+        <CodeMirror
+            value={content}
+            theme={vscodeDark}
+            extensions={extensions}
+            editable={false}
+            basicSetup={{
+                lineNumbers: true,
+                foldGutter: true,
+                highlightActiveLine: false,
+                highlightActiveLineGutter: false,
+                autocompletion: false,
+                bracketMatching: true,
+            }}
+            style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '13px',
+            }}
+        />
+    );
+};
 
 export default PasteView;
