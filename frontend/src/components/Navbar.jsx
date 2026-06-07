@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Zap } from 'lucide-react';
 
 const Navbar = () => {
     const location = useLocation();
@@ -17,8 +18,9 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex-shrink-0">
-                        <Link to="/" className="text-md font-semibold text-white tracking-wider uppercase">
-                            linhsayshii
+                        <Link to="/" className="text-md font-semibold text-white tracking-wider uppercase flex items-center gap-1.5 group">
+                            <Zap className="h-4.5 w-4.5 text-amber-400 fill-amber-400/10 group-hover:scale-110 transition-transform duration-300" />
+                            <span>linhsayshii</span>
                         </Link>
                     </div>
                     <div className="hidden md:block">
