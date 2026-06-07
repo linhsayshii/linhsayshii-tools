@@ -62,6 +62,8 @@ const getBustedUrl = (url) => {
     return `${url}${separator}_t=${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 };
 
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 const isValidIP = (ip) => {
     if (!ip) return false;
     const ipv4Regex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;
@@ -98,7 +100,11 @@ const IP = () => {
 
         const detectedIPs = new Set();
 
-        const promises = requestQueue.map(async (target) => {
+        const promises = requestQueue.map(async (target, idx) => {
+            // Introduce staggered delay (150ms per step) to bypass browser connection pooling
+            // and trigger connection-tracking based router PCC balancing
+            await delay(idx * 150);
+
             try {
                 const urlWithCb = getBustedUrl(target.url);
                 const isJson = target.url.includes('format=json') || target.url.includes('/json');
