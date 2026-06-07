@@ -74,14 +74,14 @@ const isValidIP = (ip) => {
 
 const IP = () => {
     const [results, setResults] = useState(new Map());
-    const [ipv6, setIpv6] = useState(null);
+    const [activeRoute, setActiveRoute] = useState(null);
     const [loading, setLoading] = useState(false);
     const [probingCount, setProbingCount] = useState(0);
 
     const runMultiProbe = async () => {
         setLoading(true);
         setResults(new Map());
-        setIpv6(null);
+        setActiveRoute(null);
         setProbingCount(15);
 
         // Build 15 probe configurations
@@ -99,6 +99,18 @@ const IP = () => {
         }
 
         const detectedIPs = new Set();
+
+        // Promise to detect the active connection path to backend website
+        const activeRoutePromise = (async () => {
+            try {
+                const res = await api.get('/ip/');
+                if (res.data) {
+                    setActiveRoute(res.data);
+                }
+            } catch {
+                // Ignore
+            }
+        })();
 
         const promises = requestQueue.map(async (target, idx) => {
             // Introduce staggered delay (150ms per step) to bypass browser connection pooling
@@ -141,10 +153,6 @@ const IP = () => {
                                     }
                                     return newMap;
                                 });
-
-                                if (res.data.ipv6 && !ipv6) {
-                                    setIpv6(res.data.ipv6);
-                                }
                             }
                         } catch {
                             // Backend fail fallback: show IP with unknown details
@@ -173,7 +181,7 @@ const IP = () => {
             }
         });
 
-        await Promise.all(promises);
+        await Promise.all([...promises, activeRoutePromise]);
         setLoading(false);
     };
 
@@ -182,7 +190,6 @@ const IP = () => {
             runMultiProbe();
         }, 0);
         return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const uniqueResults = Array.from(results.values());
@@ -217,22 +224,25 @@ const IP = () => {
                         : `Analysis complete. Detected ${uniqueResults.length} unique IP routing paths.`}
                 </div>
 
-                {/* IPv6 Banner */}
+                {/* Active Connection Banner */}
                 <AnimatePresence>
-                    {ipv6 && (
+                    {activeRoute && (
                         <Motion.div 
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             className="glass-card p-5 border-white/10 bg-white/[0.02] flex items-center justify-between"
                         >
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                                 <div className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                                    IPv6 Detected
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    Active Website Connection ({activeRoute.ipv6 ? 'IPv6' : activeRoute.location === 'Local Network' ? 'LAN' : 'IPv4'})
                                 </div>
                                 <div className="text-sm font-semibold tracking-wide font-mono break-all text-white pt-1">
-                                    {ipv6}
+                                    {activeRoute.ipv6 || activeRoute.ipv4}
+                                </div>
+                                <div className="text-[10px] text-neutral-500 font-medium">
+                                    Routed via: {activeRoute.isp} • {activeRoute.location}
                                 </div>
                             </div>
                         </Motion.div>
