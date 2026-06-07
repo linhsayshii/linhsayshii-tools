@@ -1,7 +1,7 @@
 import os
 
 class Settings:
-    PROJECT_NAME: str = "HVLSV Tools API"
+    PROJECT_NAME: str = "linhsayshii-tools API"
     VERSION: str = "1.0.0"
     
     # Cloudflare Turnstile Configuration
@@ -11,7 +11,7 @@ class Settings:
     
     # Database Configuration
     DATABASE_URL: str = os.environ.get(
-        "DATABASE_URL", "sqlite:///./shortener.db"
+        "DATABASE_URL", "sqlite:///./data/shortener.db"
     )
     
     # Short URL Base Configuration

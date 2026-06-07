@@ -60,7 +60,7 @@ services:
       # Định dạng: "<Cổng_Host>:<Cổng_Container_Mặc_Định_8000>"
       - "8000:8000"  # Đổi số 8000 bên trái thành cổng bạn mong muốn ở máy Host
     volumes:
-      - ./backend/shortener.db:/app/shortener.db
+      - ./backend/data:/app/data
     environment:
       - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,https://hnglinh.io.vn
       - TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
@@ -119,7 +119,7 @@ docker network create hnglinh-network
      --name hnglinh-api \
      --network hnglinh-network \
      -p 8080:8000 \
-     -v $(pwd)/backend/shortener.db:/app/shortener.db \
+     -v $(pwd)/backend/data:/app/data \
      -e CORS_ORIGINS="http://localhost:3000,https://hnglinh.io.vn" \
      -e TURNSTILE_SECRET_KEY="your_cloudflare_turnstile_secret_key" \
      --restart always \
