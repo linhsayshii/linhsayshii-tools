@@ -14,9 +14,12 @@ MODULES = ["shortener", "downloader", "paste", "qrcode", "ip"]
 _cpu_cache = {"value": 0.0}
 
 def _cpu_sampler():
-    """Sample CPU every 2s in background so /health returns instantly."""
+    """Sample CPU in background non-blocking, sleeping between samples."""
+    # Initialize psutil's internal CPU times counter
+    psutil.cpu_percent(interval=None)
     while True:
-        _cpu_cache["value"] = psutil.cpu_percent(interval=1)
+        time.sleep(5)
+        _cpu_cache["value"] = psutil.cpu_percent(interval=None)
 
 _sampler_thread = threading.Thread(target=_cpu_sampler, daemon=True)
 _sampler_thread.start()
